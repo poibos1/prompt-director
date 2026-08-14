@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Prompt Director</title>
+<link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+<header><div><h1>Prompt Director</h1><div class="sub">Image / Video Prompt Intelligence</div></div><div class="badge" id="modeBadge">VIDEO · SEEDANCE</div></header>
+<main>
+<section class="col">
+  <div class="card stack">
+    <h2>1. TYPE / MODEL</h2>
+    <div class="grid2 mode-switch" id="modeSwitch">
+      <button type="button" id="imageModeBtn" class="mode-label" onclick="setMode('IMAGE')">IMAGE</button>
+      <button type="button" id="videoModeBtn" class="mode-label active-mode" onclick="setMode('VIDEO')">VIDEO</button>
+    </div>
+    <div id="imageModelWrap" style="display:none">
+      <select id="imageModel" onchange="selectModel('IMAGE')">
+        <option value="GPT Image">GPT Image</option>
+        <option value="Nano Banana">Nano Banana</option>
+      </select>
+    </div>
+    <div id="videoModelWrap">
+      <select id="videoModel" onchange="selectModel('VIDEO')">
+        <option value="Seedance">Seedance</option>
+        <option value="Kling">Kling</option>
+      </select>
+    </div>
+    <div id="modeDebug" class="status">VIDEO · Seedance</div>
+  </div>
+
+  <div class="card stack">
+    <h2>2. REFERENCE IMAGES</h2>
+    <div class="upload"><input id="imageFiles" type="file" accept="image/*" multiple /></div>
+    <div id="thumbs" class="thumbs"></div>
+    <button id="analyzeBtn" class="ghost" onclick="analyzeImages()">Analyze Uploaded Images</button>
+    <div id="analysisStatus" class="status">최대 4장의 이미지를 업로드할 수 있습니다.</div>
+    <div id="analysisOutput" class="analysis">분석 결과가 여기에 표시됩니다.</div>
+  </div>
+
+  <div class="card stack">
+    <h2>3. REFERENCE PRIORITY</h2>
+    <div class="refrow"><b>Ref 01</b><input id="r1" type="range" min="0" max="100" value="100" oninput="syncVal('r1')"><span id="r1v">100%</span></div>
+    <div class="refrow"><b>Ref 02</b><input id="r2" type="range" min="0" max="100" value="70" oninput="syncVal('r2')"><span id="r2v">70%</span></div>
+    <div class="refrow"><b>Ref 03</b><input id="r3" type="range" min="0" max="100" value="50" oninput="syncVal('r3')"><span id="r3v">50%</span></div>
+    <div class="refrow"><b>Ref 04</b><input id="r4" type="range" min="0" max="100" value="30" oninput="syncVal('r4')"><span id="r4v">30%</span></div>
+    <textarea id="refRoles" placeholder="예: Ref 01 = pose/camera/composition, Ref 02 = tone/lighting"></textarea>
+  </div>
+
+  <div class="card stack"><h2>4. CORE REQUEST</h2><textarea id="brief" placeholder="원하는 장면, 포즈, 분위기, 반드시 유지할 요소를 입력"></textarea></div>
+</section>
+
+<section class="col">
+  <div class="card stack"><h2>CAMERA</h2>
+    <div class="grid2"><select id="camera"><option>ARRI Alexa 35</option><option>Virtual Cinematic Camera</option></select><select id="lens"><option>Helios 44</option><option>24mm Vintage</option><option>35mm Cinema</option><option>50mm Cinema</option><option>85mm Portrait</option></select></div>
+    <div class="grid3"><select id="shot"><option>Wide</option><option>Medium</option><option>Close-up</option><option>Extreme Close-up</option></select><select id="angle"><option>Eye Level</option><option>Low Angle</option><option>High Angle</option><option>Overhead</option></select><select id="move"><option>Static</option><option>Push-in</option><option>Pull-out</option><option>Dolly</option><option>Orbit</option><option>Handheld</option></select></div>
+  </div>
+  <div class="card stack"><h2>LIGHTING</h2>
+    <div><label>Backlight</label><input id="backlight" type="range" min="0" max="100" value="65"></div>
+    <div><label>Bloom</label><input id="bloom" type="range" min="0" max="100" value="35"></div>
+    <div><label>Volumetric Ray</label><input id="volume" type="range" min="0" max="100" value="45"></div>
+    <div class="grid2"><select id="temp"><option>Warm</option><option>Neutral</option><option>Cool</option></select><select id="contrast"><option>Soft Contrast</option><option>Medium Contrast</option><option>High Contrast</option></select></div>
+  </div>
+  <div class="card stack"><h2>MOTION / STYLE</h2>
+    <div><label>Pose Preservation</label><input id="pose" type="range" min="0" max="100" value="100"></div>
+    <div id="videoControls">
+      <div><label>Character Motion</label><input id="charMotion" type="range" min="0" max="100" value="70"></div>
+      <div><label>Environment Motion</label><input id="envMotion" type="range" min="0" max="100" value="55"></div>
+      <div><label>VFX</label><input id="vfx" type="range" min="0" max="100" value="35"></div>
+    </div>
+    <input id="style" type="text" placeholder="예: cinematic anime, stylized-real 6:4">
+    <textarea id="negative" placeholder="피해야 할 요소 / 금지사항"></textarea>
+  </div>
+  <button class="primary" onclick="generatePrompt()">GENERATE PROMPT</button>
+</section>
+
+<aside class="col">
+  <div class="tabs"><button class="tab active" onclick="showTab('prompt',this)">Prompt</button><button class="tab" onclick="showTab('inspect',this)">Inspector</button><button class="tab" onclick="showTab('analysis',this)">Image Analysis</button></div>
+  <div id="promptPane">
+    <div id="formatTabs" class="format-tabs"></div>
+    <div class="row" style="justify-content:flex-end;margin-bottom:8px">
+      <button id="translateBtn" class="ghost" type="button" onclick="toggleLanguage()">한/영 번역 · 한국어 보기</button>
+    </div>
+    <div id="output" class="output">Enter settings and press GENERATE PROMPT.</div>
+    <div class="row" style="margin-top:9px"><button class="ghost" onclick="copyPrompt()">Copy</button><button class="ghost" onclick="downloadPrompt()">TXT</button></div>
+  </div>
+  <div id="inspectPane" style="display:none"><div class="card"><div class="score"><span>Reference Control</span><b id="sRef" class="good">--</b></div><div class="score"><span>Pose Control</span><b id="sPose" class="good">--</b></div><div class="score"><span>Camera Control</span><b id="sCam" class="good">--</b></div><div class="score"><span>Motion Clarity</span><b id="sMotion" class="good">--</b></div><div class="score"><span>Contradiction Risk</span><b id="sRisk" class="warn">--</b></div></div><div class="card"><h2>DETECTED ISSUES</h2><div id="issues" class="tiny">아직 분석되지 않았습니다.</div></div></div>
+  <div id="analysisPane" style="display:none"><div id="analysisMirror" class="output">업로드 이미지를 분석하면 상세 결과가 표시됩니다.</div></div>
+</aside>
+</main>
+<script src="/src/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "prompt-director",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Prompt intelligence tool for GPT Image, Nano Banana, Seedance, and Kling.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check src/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "openai": "^5.12.2"
+  }
+}
