@@ -1,95 +1,81 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Prompt Director</title>
-<link rel="stylesheet" href="/src/styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>GPT Image Prompt Maker</title>
+  <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
-<header><div><h1>Prompt Director</h1><div class="sub">Image / Video Prompt Intelligence</div></div><div class="badge" id="modeBadge">VIDEO · SEEDANCE</div></header>
-<main>
-<section class="col">
-  <div class="card stack">
-    <h2>1. TYPE / MODEL</h2>
-    <div class="grid2 mode-switch" id="modeSwitch">
-      <button type="button" id="imageModeBtn" class="mode-label" onclick="setMode('IMAGE')">IMAGE</button>
-      <button type="button" id="videoModeBtn" class="mode-label active-mode" onclick="setMode('VIDEO')">VIDEO</button>
-    </div>
-    <div id="imageModelWrap" style="display:none">
-      <select id="imageModel" onchange="selectModel('IMAGE')">
-        <option value="GPT Image">GPT Image</option>
-        <option value="Nano Banana">Nano Banana</option>
-      </select>
-    </div>
-    <div id="videoModelWrap">
-      <select id="videoModel" onchange="selectModel('VIDEO')">
-        <option value="Seedance">Seedance</option>
-        <option value="Kling">Kling</option>
-      </select>
-    </div>
-    <div id="modeDebug" class="status">VIDEO · Seedance</div>
-  </div>
+  <header>
+    <div><h1>GPT Image Prompt Maker</h1><p>짧은 아이디어를 구체적인 이미지 제작 지시로 확장합니다.</p></div>
+    <span class="badge">GPT IMAGE 전용</span>
+  </header>
 
-  <div class="card stack">
-    <h2>2. REFERENCE IMAGES</h2>
-    <div class="upload"><input id="imageFiles" type="file" accept="image/*" multiple /></div>
-    <div id="thumbs" class="thumbs"></div>
-    <button id="analyzeBtn" class="ghost" onclick="analyzeImages()">Analyze Uploaded Images</button>
-    <div id="analysisStatus" class="status">최대 4장의 이미지를 업로드할 수 있습니다.</div>
-    <div id="analysisOutput" class="analysis">분석 결과가 여기에 표시됩니다.</div>
-  </div>
+  <main>
+    <section class="editor">
+      <div class="card intro">
+        <span class="step">STEP 1</span>
+        <h2>짧은 아이디어 입력</h2>
+        <p>모든 칸을 채울 필요는 없습니다. 필요한 내용만 짧게 적으세요.</p>
+      </div>
 
-  <div class="card stack">
-    <h2>3. REFERENCE PRIORITY</h2>
-    <div class="refrow"><b>Ref 01</b><input id="r1" type="range" min="0" max="100" value="100" oninput="syncVal('r1')"><span id="r1v">100%</span></div>
-    <div class="refrow"><b>Ref 02</b><input id="r2" type="range" min="0" max="100" value="70" oninput="syncVal('r2')"><span id="r2v">70%</span></div>
-    <div class="refrow"><b>Ref 03</b><input id="r3" type="range" min="0" max="100" value="50" oninput="syncVal('r3')"><span id="r3v">50%</span></div>
-    <div class="refrow"><b>Ref 04</b><input id="r4" type="range" min="0" max="100" value="30" oninput="syncVal('r4')"><span id="r4v">30%</span></div>
-    <textarea id="refRoles" placeholder="예: Ref 01 = pose/camera/composition, Ref 02 = tone/lighting"></textarea>
-  </div>
+      <div class="field-grid">
+        <label class="field"><span>주제 <small>Subject</small></span><textarea id="subject" placeholder="예: 미래 도시를 걷는 여성 탐험가"></textarea></label>
+        <label class="field"><span>스타일 <small>Style</small></span><textarea id="style" placeholder="예: 시네마틱 애니메이션, 사실적인 재질"></textarea></label>
+        <label class="field"><span>배경 <small>Background</small></span><textarea id="background" placeholder="예: 거대한 네온 도시와 고층 건물"></textarea></label>
+        <label class="field"><span>조명 + 환경 <small>Lighting &amp; Environment</small></span><textarea id="lighting" placeholder="예: 비 내리는 밤, 젖은 도로와 안개, 따뜻한 역광과 차가운 네온광"></textarea></label>
+        <label class="field"><span>색감 <small>Color</small></span><textarea id="color" placeholder="예: 청록색과 주황색, 낮은 채도"></textarea></label>
+        <label class="field"><span>구도 <small>Composition</small></span><textarea id="composition" placeholder="예: 인물을 화면 오른쪽에 배치, 깊은 원근감"></textarea></label>
+        <label class="field"><span>카메라 <small>Camera</small></span><textarea id="camera" placeholder="예: 로우 앵글, 35mm 렌즈, 얕은 심도"></textarea></label>
+        <label class="field"><span>부정 <small>Negative</small></span><textarea id="negative">왜곡된 손, 비정상적인 손가락, 왜곡된 얼굴, 추가 인물, 중복 피사체, 글자, 로고, 워터마크, 휘어진 배경, 잘못된 원근감</textarea></label>
+      </div>
 
-  <div class="card stack"><h2>4. CORE REQUEST</h2><textarea id="brief" placeholder="원하는 장면, 포즈, 분위기, 반드시 유지할 요소를 입력"></textarea></div>
-</section>
+      <div class="card reference-card">
+        <label for="referenceFiles"><span>참고 이미지 <small>선택 사항 · 최대 2장 · 자동 압축</small></span></label>
+        <input id="referenceFiles" type="file" accept="image/*" multiple>
+        <div id="references" class="references"></div>
+      </div>
 
-<section class="col">
-  <div class="card stack"><h2>CAMERA</h2>
-    <div class="grid2"><select id="camera"><option>ARRI Alexa 35</option><option>Virtual Cinematic Camera</option></select><select id="lens"><option>Helios 44</option><option>24mm Vintage</option><option>35mm Cinema</option><option>50mm Cinema</option><option>85mm Portrait</option></select></div>
-    <div class="grid3"><select id="shot"><option>Wide</option><option>Medium</option><option>Close-up</option><option>Extreme Close-up</option></select><select id="angle"><option>Eye Level</option><option>Low Angle</option><option>High Angle</option><option>Overhead</option></select><select id="move"><option>Static</option><option>Push-in</option><option>Pull-out</option><option>Dolly</option><option>Orbit</option><option>Handheld</option></select></div>
-  </div>
-  <div class="card stack"><h2>LIGHTING</h2>
-    <div><label>Backlight</label><input id="backlight" type="range" min="0" max="100" value="65"></div>
-    <div><label>Bloom</label><input id="bloom" type="range" min="0" max="100" value="35"></div>
-    <div><label>Volumetric Ray</label><input id="volume" type="range" min="0" max="100" value="45"></div>
-    <div class="grid2"><select id="temp"><option>Warm</option><option>Neutral</option><option>Cool</option></select><select id="contrast"><option>Soft Contrast</option><option>Medium Contrast</option><option>High Contrast</option></select></div>
-  </div>
-  <div class="card stack"><h2>MOTION / STYLE</h2>
-    <div><label>Pose Preservation</label><input id="pose" type="range" min="0" max="100" value="100"></div>
-    <div id="videoControls">
-      <div><label>Character Motion</label><input id="charMotion" type="range" min="0" max="100" value="70"></div>
-      <div><label>Environment Motion</label><input id="envMotion" type="range" min="0" max="100" value="55"></div>
-      <div><label>VFX</label><input id="vfx" type="range" min="0" max="100" value="35"></div>
-    </div>
-    <input id="style" type="text" placeholder="예: cinematic anime, stylized-real 6:4">
-    <textarea id="negative" placeholder="피해야 할 요소 / 금지사항"></textarea>
-  </div>
-  <button class="primary" onclick="generatePrompt()">GENERATE PROMPT</button>
-</section>
+      <div class="card workflow">
+        <span class="step">STEP 2</span>
+        <h2>AI로 자동 상세화</h2>
+        <p>ChatGPT를 열지 않고 OpenAI API가 입력 내용과 참고 이미지를 분석해 완성 프롬프트를 만듭니다.</p>
+        <button id="autoGenerateBtn" class="primary" onclick="generateWithOpenAI()">상세 프롬프트 자동 생성</button>
+        <div id="apiStatus" class="message" aria-live="polite"></div>
+        <details>
+          <summary>수동 ChatGPT 방식 · 요청 미리보기</summary>
+          <textarea id="requestPreview" class="code-area"></textarea>
+          <div class="actions two">
+            <button class="button small" onclick="copyExpansionRequest()">상세화 요청 복사</button>
+            <a class="button small" href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT 열기</a>
+          </div>
+          <button class="button small" onclick="resetRequestPreview()">입력 내용으로 다시 만들기</button>
+        </details>
+      </div>
 
-<aside class="col">
-  <div class="tabs"><button class="tab active" onclick="showTab('prompt',this)">Prompt</button><button class="tab" onclick="showTab('inspect',this)">Inspector</button><button class="tab" onclick="showTab('analysis',this)">Image Analysis</button></div>
-  <div id="promptPane">
-    <div id="formatTabs" class="format-tabs"></div>
-    <div class="row" style="justify-content:flex-end;margin-bottom:8px">
-      <button id="translateBtn" class="ghost" type="button" onclick="toggleLanguage()">한/영 번역 · 한국어 보기</button>
-    </div>
-    <div id="output" class="output">Enter settings and press GENERATE PROMPT.</div>
-    <div class="row" style="margin-top:9px"><button class="ghost" onclick="copyPrompt()">Copy</button><button class="ghost" onclick="downloadPrompt()">TXT</button></div>
-  </div>
-  <div id="inspectPane" style="display:none"><div class="card"><div class="score"><span>Reference Control</span><b id="sRef" class="good">--</b></div><div class="score"><span>Pose Control</span><b id="sPose" class="good">--</b></div><div class="score"><span>Camera Control</span><b id="sCam" class="good">--</b></div><div class="score"><span>Motion Clarity</span><b id="sMotion" class="good">--</b></div><div class="score"><span>Contradiction Risk</span><b id="sRisk" class="warn">--</b></div></div><div class="card"><h2>DETECTED ISSUES</h2><div id="issues" class="tiny">아직 분석되지 않았습니다.</div></div></div>
-  <div id="analysisPane" style="display:none"><div id="analysisMirror" class="output">업로드 이미지를 분석하면 상세 결과가 표시됩니다.</div></div>
-</aside>
-</main>
-<script src="/src/app.js" defer></script>
+      <div class="card workflow">
+        <span class="step">STEP 3</span>
+        <h2>수동 결과 적용</h2>
+        <p>자동 생성이 실패했을 때 ChatGPT가 반환한 JSON 전체를 붙여넣으세요.</p>
+        <textarea id="resultInput" class="code-area result-input" placeholder='{"final_prompt":"...", "final_prompt_ko":"...", "negative_ko":"..."}'></textarea>
+        <button class="primary" onclick="applyExpandedResult()">상세 프롬프트 적용</button>
+        <div id="validation" class="message" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="output-head"><div><span class="step">RESULT</span><h2>완성 프롬프트</h2></div><span id="wordCount" class="count">0자</span></div>
+      <div class="language-tabs"><button id="englishTab" class="active" onclick="setLanguage('en')">English</button><button id="koreanTab" onclick="setLanguage('ko')">한국어</button></div>
+      <div id="output" class="output">8개 항목을 짧게 입력한 뒤 ChatGPT 상세화 결과를 적용하세요.</div>
+      <div class="actions">
+        <button class="primary" onclick="copyOutput()">프롬프트 복사</button>
+        <button class="button" onclick="downloadOutput()">TXT 저장</button>
+      </div>
+      <div class="card history-card"><div class="history-title"><h2>최근 프롬프트</h2><button class="text-button" onclick="clearHistory()">전체 삭제</button></div><div id="history"></div></div>
+    </aside>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/src/app.js" defer></script>
 </body>
 </html>
