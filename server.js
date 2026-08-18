@@ -116,4 +116,9 @@ app.post('/api/expand-prompt', async (req, res) => {
 });
 
 app.use((_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.listen(port, () => console.log(`GPT Image Prompt Maker running at http://localhost:${port}`));
+
+if (!process.env.VERCEL) {
+  app.listen(port, () => console.log(`GPT Image Prompt Maker running at http://localhost:${port}`));
+}
+
+export default app;
