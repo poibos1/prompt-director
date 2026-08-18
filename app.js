@@ -4,6 +4,38 @@ const FIELD_DEFS=[
 ];
 const RESULT_KEYS=['final_prompt','final_prompt_ko','negative_ko'];
 const HISTORY_KEY='gpt-image-prompt-maker-history-v1';
+const TEST_PRESETS=[
+  {
+    subject:'붉은 우산을 든 여성 탐험가가 비 내리는 미래 도시의 골목을 걷는 장면',
+    style:'시네마틱 사이버펑크, 사실적인 재질, 정교한 콘셉트 아트',
+    background:'네온 간판과 높은 건물이 겹쳐진 도심 골목, 젖은 도로와 멀리 보이는 공중 열차',
+    lighting:'늦은 밤, 차가운 네온광과 따뜻한 상점 조명, 안개 사이로 번지는 역광',
+    color:'청록색과 자홍색 중심, 붉은 우산을 강조색으로 사용, 깊은 검정',
+    composition:'세로 화면, 인물을 오른쪽 3분할 지점에 배치, 골목의 선이 깊은 원근감을 형성',
+    camera:'35mm 렌즈, 눈높이보다 약간 낮은 앵글, 얕은 심도, 인물에 선명한 초점',
+    negative:'왜곡된 손, 추가 손가락, 중복 인물, 흐린 얼굴, 글자, 로고, 워터마크'
+  },
+  {
+    subject:'새벽 바닷가 절벽 위에서 거대한 흰 고래를 바라보는 어린 우주비행사',
+    style:'몽환적인 판타지 일러스트, 부드러운 회화 질감, 섬세한 디테일',
+    background:'별이 희미하게 남은 하늘, 잔잔한 바다와 절벽 아래 부서지는 파도',
+    lighting:'해 뜨기 직전의 푸른 주변광, 수평선의 따뜻한 여명, 옅은 해무',
+    color:'연한 파랑과 라벤더, 크림색 하이라이트, 낮은 채도의 파스텔 팔레트',
+    composition:'넓은 가로 화면, 우주비행사는 왼쪽 아래에 작게, 고래는 화면 중앙을 가로지름',
+    camera:'24mm 광각 렌즈, 약한 로우 앵글, 깊은 심도, 영화적인 와이드 숏',
+    negative:'과도한 채도, 공포스러운 분위기, 잘린 고래, 왜곡된 인체, 텍스트, 로고'
+  },
+  {
+    subject:'햇살 드는 오래된 서재에서 차를 내리는 주황색 고양이 바리스타',
+    style:'따뜻한 스톱모션 애니메이션, 수공예 미니어처, 포근한 펠트 질감',
+    background:'나무 책장, 작은 사다리, 낡은 책과 찻잔이 가득한 아늑한 서재',
+    lighting:'오후 햇빛이 창문으로 비스듬히 들어오고 먼지 입자가 반짝이는 환경',
+    color:'호박색, 짙은 갈색, 크림색, 차분한 올리브색의 따뜻한 조합',
+    composition:'정사각형 화면, 고양이를 중앙에 배치하고 전경의 찻잔으로 깊이감 형성',
+    camera:'50mm 렌즈, 눈높이 클로즈업, 부드러운 배경 흐림, 아날로그 필름 느낌',
+    negative:'실사 인간, 플라스틱 질감, 추가 팔다리, 비대칭 눈, 글자, 로고, 워터마크'
+  }
+];
 let expandedResult=null,currentLanguage='en',referenceImages=[],toastTimer=null,requestEdited=false;
 
 function el(id){return document.getElementById(id)}
@@ -67,7 +99,7 @@ async function generateWithOpenAI(){
 function parseJson(raw){let text=raw.trim().replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();const first=text.indexOf('{'),last=text.lastIndexOf('}');if(first>=0&&last>first)text=text.slice(first,last+1);try{return {data:JSON.parse(text)}}catch(error){return {error:`JSON을 읽지 못했습니다: ${error.message}`}}}
 function applyKoreanNegative(prompt,negativeKo){
   const section=`## 부정\n${negativeKo.trim()}`;
-  const pattern=/\n{0,2}(?:##\s*)?(?:부정|NEGATIVE|Negative)\s*\n[\s\S]*$/;
+  const pattern=/\n{0,2}(?:##\s*)?(?:부정(?:\s*요소)?|NEGATIVE|Negative)\s*\n[\s\S]*$/;
   return pattern.test(prompt)?prompt.replace(pattern,`\n\n${section}`):`${prompt.trim()}\n\n${section}`;
 }
 function applyExpandedResult(){
@@ -85,10 +117,35 @@ function applyExpandedResult(){
   return true;
 }
 function setLanguage(language){currentLanguage=language;renderResult()}
+const SECTION_LABELS={
+  'SUBJECT':['주제','SUBJECT'],'주제':['주제','SUBJECT'],
+  'STYLE':['스타일','STYLE'],'스타일':['스타일','STYLE'],
+  'BACKGROUND':['배경','BACKGROUND'],'배경':['배경','BACKGROUND'],
+  'LIGHTING & ENVIRONMENT':['조명 및 환경','LIGHTING & ENVIRONMENT'],'조명 및 환경':['조명 및 환경','LIGHTING & ENVIRONMENT'],
+  'COLOR PALETTE':['색상 팔레트','COLOR PALETTE'],'색상 팔레트':['색상 팔레트','COLOR PALETTE'],
+  'COMPOSITION':['구도','COMPOSITION'],'구도':['구도','COMPOSITION'],
+  'CAMERA':['카메라','CAMERA'],'카메라':['카메라','CAMERA'],
+  'NEGATIVE':['부정 요소','NEGATIVE'],'부정':['부정 요소','NEGATIVE'],'부정 요소':['부정 요소','NEGATIVE']
+};
+function splitPromptSections(prompt){
+  const sections=[];
+  const pattern=/^##\s+(.+?)\s*\n([\s\S]*?)(?=^##\s+|$)/gm;
+  for(const match of prompt.matchAll(pattern))sections.push({title:match[1].trim(),content:match[2].trim()});
+  return sections;
+}
+function renderSectionedPrompt(prompt){
+  const output=el('output'),sections=splitPromptSections(prompt);
+  if(!sections.length){output.classList.remove('sectioned');output.textContent=prompt;return}
+  output.classList.add('sectioned');
+  output.innerHTML=sections.map((section,index)=>{
+    const [korean,english]=SECTION_LABELS[section.title]||[section.title,''];
+    return `<article class="prompt-section"><div class="prompt-section-head"><span class="section-number">${String(index+1).padStart(2,'0')}</span><h3>${escapeHtml(korean)}${english?` <small>${escapeHtml(english)}</small>`:''}</h3></div><p>${escapeHtml(section.content)}</p></article>`;
+  }).join('');
+}
 function renderResult(){
   el('englishTab').classList.toggle('active',currentLanguage==='en');el('koreanTab').classList.toggle('active',currentLanguage==='ko');
   const prompt=expandedResult?(currentLanguage==='en'?expandedResult.final_prompt:expandedResult.final_prompt_ko):'';
-  el('output').textContent=prompt||'8개 항목을 짧게 입력한 뒤 상세 프롬프트를 생성하세요.';el('wordCount').textContent=currentLanguage==='en'?`${prompt.length.toLocaleString()}자 · 목표 2,250±250`:`${prompt.length.toLocaleString()}자`;
+  if(prompt)renderSectionedPrompt(prompt);else{el('output').classList.remove('sectioned');el('output').textContent='8개 항목을 짧게 입력한 뒤 상세 프롬프트를 생성하세요.'}el('wordCount').textContent=currentLanguage==='en'?`${prompt.length.toLocaleString()}자 · 목표 2,250±250`:`${prompt.length.toLocaleString()}자`;
 }
 async function copyOutput(){if(!expandedResult){showToast('먼저 상세 프롬프트를 적용하세요.','warn');return}const text=currentLanguage==='en'?expandedResult.final_prompt:expandedResult.final_prompt_ko;try{await navigator.clipboard.writeText(text);showToast('프롬프트를 복사했습니다.')}catch{showToast('클립보드 권한을 확인하세요.','error')}}
 function downloadOutput(){if(!expandedResult)return;const text=currentLanguage==='en'?expandedResult.final_prompt:expandedResult.final_prompt_ko;const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));link.download=`gpt-image-prompt-${currentLanguage}.txt`;link.click();URL.revokeObjectURL(link.href)}
@@ -105,7 +162,32 @@ async function handleReferences(event){referenceImages=[];const files=[...event.
 function renderReferences(){el('references').innerHTML=referenceImages.map((item,index)=>`<figure><img src="${item.dataUrl}" alt="${escapeHtml(item.name)}"><figcaption>Ref ${String(index+1).padStart(2,'0')}</figcaption><button aria-label="참고 이미지 삭제" onclick="removeReference(${index})">×</button></figure>`).join('')}
 function removeReference(index){referenceImages.splice(index,1);renderReferences();refreshRequestPreview(true)}
 
+function fillQuickTest(){
+  const preset=TEST_PRESETS[Math.floor(Math.random()*TEST_PRESETS.length)];
+  FIELD_DEFS.forEach(([key])=>{el(key).value=preset[key]});
+  requestEdited=false;
+  refreshRequestPreview(true);
+  showToast('임시 테스트 내용을 입력했습니다.');
+}
+
+const THEME_KEY='gpt-image-prompt-maker-theme';
+function applyTheme(theme){
+  const isLight=theme==='light',button=el('themeToggle');
+  document.documentElement.dataset.theme=isLight?'light':'dark';
+  button.setAttribute('aria-pressed',String(isLight));
+  button.setAttribute('aria-label',isLight?'어두운 화면으로 전환':'밝은 화면으로 전환');
+  button.querySelector('.theme-icon').textContent=isLight?'☾':'☀';
+  button.querySelector('.theme-label').textContent=isLight?'어두운 화면':'밝은 화면';
+}
+function toggleTheme(){
+  const next=document.documentElement.dataset.theme==='light'?'dark':'light';
+  localStorage.setItem(THEME_KEY,next);
+  applyTheme(next);
+}
+
 FIELD_DEFS.forEach(([key])=>el(key).addEventListener('input',()=>refreshRequestPreview(false)));
 el('requestPreview').addEventListener('input',()=>{requestEdited=true});
 el('referenceFiles').addEventListener('change',handleReferences);
-refreshRequestPreview(true);renderHistory();renderResult();
+el('themeToggle').addEventListener('click',toggleTheme);
+el('quickTestBtn').addEventListener('click',fillQuickTest);
+applyTheme(document.documentElement.dataset.theme);refreshRequestPreview(true);renderHistory();renderResult();
